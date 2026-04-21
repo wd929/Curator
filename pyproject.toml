@@ -97,6 +97,7 @@ deduplication_cuda12 = [
 
 audio_common = [
     "nemo_toolkit[asr]>=2.7.2",
+    "fireredasr2s @ git+https://github.com/FireRedTeam/FireRedASR2S.git",
     "soundfile>=0.12.0",
     "onnx>=1.19.0",
     "silero-vad",
