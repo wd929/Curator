@@ -126,15 +126,16 @@ class CanaryASRStage(BaseASRProcessorStage):
             raise RuntimeError(msg) from e
 
         try:
+            load_device = torch.device("cpu") if self._device == "cuda" else torch.device(self._device)
             if self.model_path:
                 self._asr_model = nemo_asr.models.ASRModel.restore_from(
                     restore_path=self.model_path,
-                    map_location=torch.device(self._device),
+                    map_location=load_device,
                 )
             else:
                 self._asr_model = nemo_asr.models.ASRModel.from_pretrained(
                     model_name=self.model_name,
-                    map_location=torch.device(self._device),
+                    map_location=load_device,
                 )
         except Exception as e:
             model_id = self.model_path or self.model_name
@@ -149,6 +150,8 @@ class CanaryASRStage(BaseASRProcessorStage):
             return
 
         if hasattr(self._asr_model, "to"):
+            if self._device == "cuda":
+                torch.cuda.empty_cache()
             self._asr_model.to(self._device)
         if hasattr(self._asr_model, "eval"):
             self._asr_model.eval()
