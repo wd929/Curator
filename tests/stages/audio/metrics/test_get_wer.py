@@ -121,3 +121,10 @@ def test_normalized_wer_can_disable_nemo_tn(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert stage.normalizer is None
     assert stage.normalize_text("A  <unk>  B | C") == "A B C"
+
+
+def test_pnc_chars_can_include_regex_special_characters() -> None:
+    stage = ComputeNormalizedWERMetricsStage(use_nemo_tn=False, pnc_chars=".,?!;:%/[](){}\"'-\u2013\u2014")
+
+    assert stage.strip_spaces_before_punctuations("word ? next ]") == "word? next]"
+    assert stage.clean_text("A [B] - C% D/E", retain_pncs=False) == "a b c d e"

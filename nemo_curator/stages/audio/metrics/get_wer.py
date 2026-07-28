@@ -214,7 +214,8 @@ class ComputeNormalizedWERMetricsStage(ProcessingStage[AudioTask, AudioTask]):
         """
         Strip spaces before punctuation characters.
         """
-        return re.sub(f"(\\w)\\s+([{self.pnc_chars}])", r"\1\2", text)
+        escaped_pnc_chars = re.escape(self.pnc_chars)
+        return re.sub(f"(\\w)\\s+([{escaped_pnc_chars}])", r"\1\2", text)
 
     def normalize_and_clean_text(self, text: str) -> tuple[str, str]:
         """
