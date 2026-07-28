@@ -38,7 +38,9 @@ _LAZY_IMPORTS = {
     "MergeAlignmentDiarizationStage": "nemo_curator.stages.audio.tagging.merge_alignment_diarization",
     # --- Inference (tagging/inference/) ---
     "BaseASRProcessorStage": "nemo_curator.stages.audio.tagging.inference.nemo_asr_align",
+    "CanaryASRStage": "nemo_curator.stages.audio.tagging.inference.canary_asr",
     "NeMoASRAlignerStage": "nemo_curator.stages.audio.tagging.inference.nemo_asr_align",
+    "WhisperASRStage": "nemo_curator.stages.audio.tagging.inference.whisper_asr",
     "PyAnnoteDiarizationStage": "nemo_curator.stages.audio.inference.speaker_diarization.pyannote",
     "WhisperXVADStage": "nemo_curator.stages.audio.inference.vad.whisperx_vad",
 }

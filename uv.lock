@@ -4989,6 +4989,7 @@ all = [
     { name = "easydict" },
     { name = "einops" },
     { name = "fasttext" },
+    { name = "faster-whisper" },
     { name = "flash-attn", marker = "platform_machine == 'x86_64' and sys_platform != 'darwin'" },
     { name = "ftfy" },
     { name = "gpustat" },
@@ -5046,6 +5047,7 @@ all = [
 ]
 audio-common = [
     { name = "accelerate" },
+    { name = "faster-whisper" },
     { name = "librosa" },
     { name = "nemo-text-processing" },
     { name = "nemo-toolkit", extra = ["asr"] },
@@ -5066,6 +5068,7 @@ audio-common = [
 ]
 audio-cpu = [
     { name = "accelerate" },
+    { name = "faster-whisper" },
     { name = "librosa" },
     { name = "nemo-text-processing" },
     { name = "nemo-toolkit", extra = ["asr"] },
@@ -5088,6 +5091,7 @@ audio-cpu = [
 audio-cuda12 = [
     { name = "accelerate" },
     { name = "cuda-python" },
+    { name = "faster-whisper" },
     { name = "gpustat" },
     { name = "librosa" },
     { name = "nemo-text-processing" },
@@ -5354,6 +5358,7 @@ requires-dist = [
     { name = "easydict", marker = "extra == 'video-cpu'" },
     { name = "einops", marker = "extra == 'video-cpu'" },
     { name = "fasttext", marker = "extra == 'text-cpu'", specifier = "==0.9.3" },
+    { name = "faster-whisper", marker = "extra == 'audio-common'", specifier = ">=1.2.1" },
     { name = "flash-attn", marker = "platform_machine == 'x86_64' and sys_platform != 'darwin' and extra == 'video-cuda12'", specifier = "<=2.8.3" },
     { name = "fsspec" },
     { name = "ftfy", marker = "extra == 'text-cpu'" },

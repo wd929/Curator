@@ -15,8 +15,10 @@
 
 import re
 import time
+from typing import Any
 
 import editdistance
+from loguru import logger
 from nemo.collections.asr.metrics.wer import word_error_rate_detail
 
 from nemo_curator.backends.base import WorkerMetadata
@@ -116,7 +118,7 @@ class ComputeNormalizedWERMetricsStage(ProcessingStage[AudioTask, AudioTask]):
     # Stage metadata
     name: str = "ComputeNormalizedWERMetrics"
 
-    normalizer: Normalizer = field(default=None, repr=False)
+    normalizer: Any = field(default=None, repr=False)
 
     def inputs(self) -> tuple[list[str], list[str]]:
         return [], [self.segments_key]
@@ -126,8 +128,14 @@ class ComputeNormalizedWERMetricsStage(ProcessingStage[AudioTask, AudioTask]):
 
     def setup(self, _: WorkerMetadata | None = None) -> None:
         """Setup stage."""
-        if self.normalizer is None:
-            self.normalizer = Normalizer(input_case="cased", lang=self.language.lower())
+        if self.normalizer is None and NEMO_TEXT_PROCESSING_AVAILABLE:
+            try:
+                self.normalizer = Normalizer(input_case="cased", lang=self.language.lower())
+            except (AssertionError, ImportError, ModuleNotFoundError, ValueError) as e:
+                logger.warning(
+                    f"[{self.name}] NeMo text normalization is unavailable for language={self.language!r}; "
+                    f"falling back to WER/CER text cleaning without TN. Error: {e}"
+                )
 
     def normalize_text(self, text: str) -> str:
         """
