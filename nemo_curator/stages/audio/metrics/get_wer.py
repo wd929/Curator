@@ -131,7 +131,7 @@ class ComputeNormalizedWERMetricsStage(ProcessingStage[AudioTask, AudioTask]):
         if self.normalizer is None and NEMO_TEXT_PROCESSING_AVAILABLE:
             try:
                 self.normalizer = Normalizer(input_case="cased", lang=self.language.lower())
-            except (AssertionError, ImportError, ModuleNotFoundError, ValueError) as e:
+            except (AssertionError, ImportError, ModuleNotFoundError, NotImplementedError, ValueError) as e:
                 logger.warning(
                     f"[{self.name}] NeMo text normalization is unavailable for language={self.language!r}; "
                     f"falling back to WER/CER text cleaning without TN. Error: {e}"

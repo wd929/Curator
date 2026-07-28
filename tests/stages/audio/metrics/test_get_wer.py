@@ -14,7 +14,9 @@
 
 import pytest
 
+import nemo_curator.stages.audio.metrics.get_wer as get_wer_module
 from nemo_curator.stages.audio.metrics.get_wer import (
+    ComputeNormalizedWERMetricsStage,
     GetPairwiseWerStage,
     get_cer,
     get_charrate,
@@ -70,3 +72,36 @@ def test_pairwise_wer_stage() -> None:
     result = stage.process(entry)
     assert isinstance(result, AudioTask)
     assert result.data["wer"] == 33.33
+
+
+def test_normalized_wer_setup_falls_back_for_unsupported_language(monkeypatch: pytest.MonkeyPatch) -> None:
+    class UnsupportedNormalizer:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            msg = "Language ro has not been supported yet."
+            raise NotImplementedError(msg)
+
+    monkeypatch.setattr(get_wer_module, "NEMO_TEXT_PROCESSING_AVAILABLE", True)
+    monkeypatch.setattr(get_wer_module, "Normalizer", UnsupportedNormalizer)
+
+    stage = ComputeNormalizedWERMetricsStage(
+        language="ro",
+        hypothesis_text_key="text_canary",
+        reference_text_key="text_whisper",
+    )
+    stage.setup()
+    assert stage.normalizer is None
+
+    task = AudioTask(
+        data={
+            "segments": [
+                {
+                    "start": 0.0,
+                    "end": 1.0,
+                    "text_canary": "a b c",
+                    "text_whisper": "a x c",
+                }
+            ]
+        }
+    )
+    result = stage.process(task)
+    assert "wer" in result.data["segments"][0]["metrics"]
