@@ -75,7 +75,7 @@ class TestCanaryASRStage:
         assert model.calls[0]["audio"] == ["seg.wav"]
         assert model.calls[0]["source_lang"] == "ro"
         assert model.calls[0]["target_lang"] == "ro"
-        assert model.calls[0]["pnc"] is True
+        assert model.calls[0]["pnc"] == "yes"
         assert "task" not in model.calls[0]
 
     def test_process_segments_offsets_word_timestamps(self) -> None:
@@ -142,6 +142,27 @@ class TestCanaryASRStage:
         stage.process_batch([task])
 
         assert model.calls[0]["task"] == "asr"
+
+    def test_prompt_flags_are_normalized_for_nemo(self) -> None:
+        model = DummyCanaryModel()
+        stage = CanaryASRStage(pnc=False, itn=True, diarize=False, _asr_model=model)
+        task = AudioTask(
+            data={
+                "segments": [
+                    {
+                        "start": 0.0,
+                        "end": 1.0,
+                        "resampled_audio_filepath": "seg.wav",
+                    }
+                ],
+            }
+        )
+
+        stage.process_batch([task])
+
+        assert model.calls[0]["pnc"] == "no"
+        assert model.calls[0]["itn"] == "yes"
+        assert model.calls[0]["diarize"] == "no"
 
     def test_process_raises_not_implemented(self) -> None:
         stage = CanaryASRStage(_asr_model=DummyCanaryModel())

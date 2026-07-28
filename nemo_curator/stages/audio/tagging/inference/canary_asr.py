@@ -62,9 +62,9 @@ class CanaryASRStage(BaseASRProcessorStage):
 
     source_lang: str = "ro"
     target_lang: str | None = None
-    pnc: bool = True
-    itn: bool | None = None
-    diarize: bool | None = None
+    pnc: bool | str = True
+    itn: bool | str | None = None
+    diarize: bool | str | None = None
     decodercontext: str | None = None
     emotion: str | None = None
     task: str | None = None
@@ -175,14 +175,14 @@ class CanaryASRStage(BaseASRProcessorStage):
             "batch_size": batch_size,
             "source_lang": self.source_lang,
             "target_lang": self.target_lang,
-            "pnc": self.pnc,
+            "pnc": self._normalize_prompt_flag(self.pnc),
         }
         if self.compute_timestamps:
             kwargs["timestamps"] = True
         if self.itn is not None:
-            kwargs["itn"] = self.itn
+            kwargs["itn"] = self._normalize_prompt_flag(self.itn)
         if self.diarize is not None:
-            kwargs["diarize"] = self.diarize
+            kwargs["diarize"] = self._normalize_prompt_flag(self.diarize)
         if self.decodercontext is not None:
             kwargs["decodercontext"] = self.decodercontext
         if self.emotion is not None:
@@ -191,6 +191,13 @@ class CanaryASRStage(BaseASRProcessorStage):
             kwargs["task"] = self.task
         kwargs.update(self.transcribe_kwargs)
         return kwargs
+
+    @staticmethod
+    def _normalize_prompt_flag(value: bool | str) -> str:
+        """NeMo Canary prompt slots expect text values, not Python booleans."""
+        if isinstance(value, bool):
+            return "yes" if value else "no"
+        return value
 
     def inputs(self) -> tuple[list[str], list[str]]:
         return ["data"], ["duration", self.segments_key, "split_filepaths", "split_metadata"]
