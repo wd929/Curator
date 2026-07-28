@@ -21,13 +21,23 @@ import math
 import time
 from dataclasses import dataclass
 
-import torchaudio
+import soundfile as sf
 from fsspec.core import url_to_fs
 from loguru import logger
 
 from nemo_curator.stages.audio.tagging.inference.nemo_asr_align import NeMoASRAlignerStage
 from nemo_curator.stages.base import CompositeStage, ProcessingStage
 from nemo_curator.tasks import AudioTask
+
+
+def _load_audio_for_split(path: str) -> tuple[object, int]:
+    """Load audio as frames x channels to avoid torchaudio's torchcodec backend."""
+    audio, sample_rate = sf.read(path, dtype="float32", always_2d=True)
+    return audio, int(sample_rate)
+
+
+def _save_audio_slice(path: str, audio: object, sample_rate: int, start_frame: int, end_frame: int | None = None) -> None:
+    sf.write(path, audio[start_frame:end_frame], sample_rate)
 
 
 @dataclass
@@ -112,12 +122,12 @@ class SplitLongAudioStage(ProcessingStage[AudioTask, AudioTask]):
         _fs, resolved_path = url_to_fs(audio_path)
 
         # parent_url preserves protocol prefix (e.g. "s3://bucket/dir") for stored paths;
-        # resolved_parent is the fsspec-resolved counterpart for torchaudio I/O.
+        # resolved_parent is the fsspec-resolved counterpart for local audio I/O.
         parent_url, filename = audio_path.rsplit("/", 1) if "/" in audio_path else ("", audio_path)
         resolved_parent = resolved_path.rsplit("/", 1)[0] if "/" in resolved_path else ""
         stem = filename.rsplit(".", 1)[0] if "." in filename else filename
 
-        audio, sr = torchaudio.load(resolved_path)
+        audio, sr = _load_audio_for_split(resolved_path)
 
         split_start = 0
         split_filepaths, actual_splits, split_durations = [], [], []
@@ -129,7 +139,7 @@ class SplitLongAudioStage(ProcessingStage[AudioTask, AudioTask]):
             split_end = math.ceil(split * sr)
 
             if split_end - split_start > self.min_len * sr:
-                torchaudio.save(split_resolved, audio[:, split_start:split_end], sr)
+                _save_audio_slice(split_resolved, audio, sr, split_start, split_end)
                 split_filepaths.append(split_filepath)
                 actual_splits.append(split_start / sr)
                 split_durations.append((split_end - split_start) / sr)
@@ -138,11 +148,11 @@ class SplitLongAudioStage(ProcessingStage[AudioTask, AudioTask]):
         split_name = f"{stem}.{1 + len(splits)}_of_{1 + len(splits)}.wav"
         split_filepath = f"{parent_url}/{split_name}" if parent_url else split_name
         split_resolved = f"{resolved_parent}/{split_name}" if resolved_parent else split_name
-        last_frame = len(audio[0])
+        last_frame = len(audio)
         remaining_frames = last_frame - split_start
 
         if remaining_frames > self.min_len * sr:
-            torchaudio.save(split_resolved, audio[:, split_start:], sr)
+            _save_audio_slice(split_resolved, audio, sr, split_start)
             split_filepaths.append(split_filepath)
             split_durations.append(remaining_frames / sr)
             actual_splits.append(split_start / sr)
@@ -150,7 +160,7 @@ class SplitLongAudioStage(ProcessingStage[AudioTask, AudioTask]):
         audio_item_id, split_filepaths_before = data_entry.get("audio_item_id", "unknown"), bool(split_filepaths)
 
         if not split_filepaths:
-            duration = len(audio[0]) / sr
+            duration = len(audio) / sr
             logger.warning(
                 f"[{self.name}] No split files produced for entry "
                 f"'{audio_item_id}' (duration={duration:.1f}s, splits={splits}). "
@@ -241,7 +251,7 @@ class SplitLongAudioBySegmentsStage(ProcessingStage[AudioTask, AudioTask]):
         resolved_parent = resolved_path.rsplit("/", 1)[0] if "/" in resolved_path else ""
         stem = filename.rsplit(".", 1)[0] if "." in filename else filename
 
-        audio, sr = torchaudio.load(resolved_path)
+        audio, sr = _load_audio_for_split(resolved_path)
 
         for idx, segment in enumerate(segments):
             split_start = int(segment["start"] * sr)
@@ -252,10 +262,10 @@ class SplitLongAudioBySegmentsStage(ProcessingStage[AudioTask, AudioTask]):
                     split_name = f"{stem}.{idx + 1}_of_{len(segments)}.wav"
                     split_filepath = f"{parent_url}/{split_name}" if parent_url else split_name
                     split_resolved = f"{resolved_parent}/{split_name}" if resolved_parent else split_name
-                    torchaudio.save(split_resolved, audio[:, split_start:split_end], sr)
+                    _save_audio_slice(split_resolved, audio, sr, split_start, split_end)
                     segment["resampled_audio_filepath"] = split_filepath
                     segment["duration"] = segment["end"] - segment["start"]
-                except (RuntimeError, OSError) as e:
+                except (RuntimeError, OSError, ValueError) as e:
                     logger.error(f"Error saving audio segment {idx}: {e}")
                     continue
 
