@@ -22,7 +22,7 @@ Romanian transcription with ``source_lang=target_lang="ro"``.
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Protocol
 
 import torch
 from loguru import logger
@@ -105,10 +105,7 @@ class CanaryASRStage(BaseASRProcessorStage):
             raise RuntimeError(msg) from e
 
         try:
-            kwargs: dict[str, Any] = {"model_name": self.model_name, "return_model_file": True}
-            if self.cache_dir is not None:
-                kwargs["cache_dir"] = self.cache_dir
-            nemo_asr.models.ASRModel.from_pretrained(**kwargs)
+            nemo_asr.models.ASRModel.from_pretrained(model_name=self.model_name, return_model_file=True)
         except Exception as e:
             msg = f"[{self.name}] Failed to download model {self.model_name}"
             raise RuntimeError(msg) from e
@@ -135,10 +132,10 @@ class CanaryASRStage(BaseASRProcessorStage):
                     map_location=torch.device(self._device),
                 )
             else:
-                kwargs: dict[str, Any] = {"model_name": self.model_name, "map_location": torch.device(self._device)}
-                if self.cache_dir is not None:
-                    kwargs["cache_dir"] = self.cache_dir
-                self._asr_model = nemo_asr.models.ASRModel.from_pretrained(**kwargs)
+                self._asr_model = nemo_asr.models.ASRModel.from_pretrained(
+                    model_name=self.model_name,
+                    map_location=torch.device(self._device),
+                )
         except Exception as e:
             model_id = self.model_path or self.model_name
             msg = f"[{self.name}] Failed to load model {model_id}"
