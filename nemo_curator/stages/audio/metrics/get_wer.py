@@ -111,6 +111,7 @@ class ComputeNormalizedWERMetricsStage(ProcessingStage[AudioTask, AudioTask]):
     reference_text_key: str = "text"
     num_words_threshold: int = 200
     num_words_look_back: int = 5
+    use_nemo_tn: bool = True
     compute_pnc_wer: bool = False
     pnc_chars: str = ",.!?"
     edge_length: int = 12
@@ -128,6 +129,10 @@ class ComputeNormalizedWERMetricsStage(ProcessingStage[AudioTask, AudioTask]):
 
     def setup(self, _: WorkerMetadata | None = None) -> None:
         """Setup stage."""
+        if not self.use_nemo_tn:
+            logger.info(f"[{self.name}] NeMo text normalization is disabled; using basic text cleaning.")
+            return
+
         if self.normalizer is None and NEMO_TEXT_PROCESSING_AVAILABLE:
             try:
                 self.normalizer = Normalizer(input_case="cased", lang=self.language.lower())

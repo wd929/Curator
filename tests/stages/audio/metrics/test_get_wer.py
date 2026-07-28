@@ -105,3 +105,19 @@ def test_normalized_wer_setup_falls_back_for_unsupported_language(monkeypatch: p
     )
     result = stage.process(task)
     assert "wer" in result.data["segments"][0]["metrics"]
+
+
+def test_normalized_wer_can_disable_nemo_tn(monkeypatch: pytest.MonkeyPatch) -> None:
+    class UnexpectedNormalizer:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            msg = "Normalizer should not be constructed"
+            raise AssertionError(msg)
+
+    monkeypatch.setattr(get_wer_module, "NEMO_TEXT_PROCESSING_AVAILABLE", True)
+    monkeypatch.setattr(get_wer_module, "Normalizer", UnexpectedNormalizer)
+
+    stage = ComputeNormalizedWERMetricsStage(language="ro", use_nemo_tn=False)
+    stage.setup()
+
+    assert stage.normalizer is None
+    assert stage.normalize_text("A  <unk>  B | C") == "A B C"
